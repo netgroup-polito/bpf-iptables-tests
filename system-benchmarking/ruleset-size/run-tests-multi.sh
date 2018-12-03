@@ -15,7 +15,6 @@ polycubed="sudo polycubed"
 polycubectl="$GOPATH/bin/polycubectl"
 
 # Local configurations (Pkt generator)
-FORWARD_TEST_LOG=forward_test.$NOW.log
 PKTGEN_FOLDER="$HOME/dev/pktgen-dpdk"
 POLYCUBE_VERSION="none"
 IPTABLES="pcn-iptables"
@@ -201,7 +200,6 @@ echo "$result"
 
 function disable_conntrack {
 ssh polycube@$REMOTE_DUT << EOF
-  sudo $REMOTE_CONNTRACK_SCRIPT_FOLDER/disable.sh
   sudo rmmod iptable_nat
   sudo rmmod ipt_MASQUERADE
   sudo rmmod nf_nat_ipv4
@@ -292,10 +290,6 @@ while getopts :r:o:inh option; do
     ;;
  esac
 done
-
-if [ -f $FORWARD_TEST_LOG ]; then
-	rm $FORWARD_TEST_LOG
-fi
 
 if [ -z ${NUMBER_RUNS+x} ]; then
 	echo "You should specify the number of runs with the -r option" >&2;
