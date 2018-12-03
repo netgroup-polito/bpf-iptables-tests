@@ -6,7 +6,7 @@ This repository contains the datasets and the scripts used for the evaluation se
 
 ## Test environment
 
-#### Setup
+### Setup
 
 Our testbed includes a first server used as DUT running the firewall under test and a second used as packet generator (and possibly receiver).
 The DUT encompasses an Intel Xeon Gold 5120 14-cores CPU @2.20GHz (hyper-threading disabled) with support for Intel's Data Direct I/O (DDIO), 19.25 MB of L3 cache and two 32GB RAM modules.
@@ -19,7 +19,7 @@ To correctly replicate the results described in the paper, you should use a simi
 
 
 
-#### Testing tools
+### Testing tools
 
 ##### Pktgen-DPDK
 
