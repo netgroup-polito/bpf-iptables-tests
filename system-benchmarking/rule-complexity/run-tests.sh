@@ -26,6 +26,8 @@ LOCAL_NAME=cube1
 LOCAL_DUT=IPADDRESS
 START_RATE=50.0
 
+CONTAINER_ID=0000
+
 declare -a ruleset_values=("ipsrc" "ipsrc_ipdst" "ipsrc_ipdst_proto" "ipsrc_ipdst_proto_portsrc" "all")
 
 #######################################
@@ -108,37 +110,13 @@ where:
 echo "$usage"
 }
 
-# Kill polycubed, and wait all services to be unloaded and process to be completely killed
-function polycubed_kill_and_wait {
-	set -x
-  echo "killing polycubed ..."
-  sudo pkill polycubed > /dev/null 2>&1
-
-  done=0
-  i=0
-  while : ; do
-    sleep 1
-    alive=$(ps -el | grep polycubed)
-    if [ -z "$alive" ]; then
-      done=1
-    fi
-
-    i=$((i+1))
-
-    if [ "$done" -eq 1 ]; then
-        echo "killing polycubed in $i seconds"
-        break
-    fi
-  done
-}
-
 function setup_environment {
 local test_type=$1
+CONTAINER_ID=$(ssh polycube@$REMOTE_DUT "sudo docker run -id --name bpf-iptables --rm --privileged --network host -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro netgrouppolito/bpf-iptables:latest bash")
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo sh -c "echo 1 > /proc/sys/net/core/bpf_jit_enable"
-  sudo bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST > /home/polycube/log 2>&1 &"
-  sudo bash -c "$REMOTE_FOLDER/rulesets/rules_${test_type}.sh $IPTABLES FORWARD"
+  sudo docker exec -d bpf-iptables bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST > /home/polycube/log 2>&1 &"
+  sudo docker exec bpf-iptables bash -c "$REMOTE_FOLDER/rulesets/rules_${test_type}.sh $IPTABLES FORWARD"
 EOF
 if [ ${IPTABLES} == "pcn-iptables"  ]; then
   generate_polycube_config_file
@@ -157,30 +135,12 @@ singleparameterworkaround: true
 EOF
 }
 
-function start_remote_cpu_monitor {
-  local test_type=$1
-  local add_arg=$2
-  ssh polycube@$REMOTE_DUT << EOF
-  set -x
-  sudo sar -P ALL -o /tmp/output_usage.$NOW.${test_type}.$add_arg 5 >/dev/null 2>&1 &
-EOF
-}
-
-function stop_remote_cpu_monitor {
-  local test_type=$1
-  local add_arg=$2
-  ssh polycube@$REMOTE_DUT << EOF
-  set -x
-  sudo killall sar
-  scp /tmp/output_usage.$NOW.${test_type}.$add_arg $LOCAL_NAME@$LOCAL_DUT:$DIR/output_usage.$NOW.${test_type}.$add_arg
-EOF
-}
-
 function cleanup_environment {
 ssh polycube@$REMOTE_DUT << EOF
   $(typeset -f polycubed_kill_and_wait)
   polycubed_kill_and_wait
   sudo iptables -F FORWARD
+  sudo docker stop ${CONTAINER_ID}
   sudo nft flush table ip filter
   sudo nft delete table ip filter
   sudo pkill config_dut
@@ -421,7 +381,6 @@ for test_type in "${ruleset_values[@]}"; do
 
   sleep 5
   generate_pktgen_config_file 0
-  start_remote_cpu_monitor $test_type "multi-core"
 
   if [ ${IPTABLES} == "pcn-iptables"  ]; then
     disable_nft
@@ -431,7 +390,6 @@ for test_type in "${ruleset_values[@]}"; do
   cd $PKTGEN_FOLDER
   sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/rule-complexity.lua
   sleep 5
-  stop_remote_cpu_monitor $test_type "multi-core"
   extract_rate_from_rules $test_type
   cat "pcn-iptables-forward.csv" >> $DIR/"$OUT_FILE-${test_type}.txt"
 
@@ -465,7 +423,6 @@ for test_type in "${ruleset_values[@]}"; do
 
   sleep 5
   generate_pktgen_config_file 0
-  start_remote_cpu_monitor $test_type "single-core"
 
   if [ ${IPTABLES} == "pcn-iptables"  ]; then
     disable_nft
@@ -475,7 +432,6 @@ for test_type in "${ruleset_values[@]}"; do
   cd $PKTGEN_FOLDER
   sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/rule-complexity.lua
   sleep 5
-  stop_remote_cpu_monitor $test_type "single-core"
 
   echo "" >> $DIR/"$OUT_FILE-${test_type}.txt"
   echo "Single core binary search" >> $DIR/"$OUT_FILE-${test_type}.txt"
