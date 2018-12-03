@@ -1,22 +1,22 @@
-## Performance dependency on the number of matching fieds
+# Performance dependency on the number of matching fieds
 
 Since the `bpf-iptables` modular pipeline requires a separate eBPF program (hence an additional processing penalty) for each matching field, this test evaluates the throughput of `bpf-iptables` when augmenting the number of matching fields in the deployed rules in order to characterize the (possible) performance degradation when operating on a growing number of protocol fields.
 
-#### Rule-sets
+## Rule-sets
 
 The rule-sets used for this tests can be found in the [rulsets](./rulesets) folder.
 
-#### Test description
+## Test description
 
 The packet generator is configured to generate traffic uniformly distributed among all the rules so that all packets will uniformly match the rules and no packet will match the default action of the chain, in other words, the number of flows generated is equal to the number of rules under consideration.
 
-##### Setup
+### Setup
 
 The packet generator and the DUT should be connected each other through an XDP-compatible NIC. In particular, the first interface of the generator is connected to the first interface of the DUT and the same for the second interface (which are configured accordingly in the following scripts).
 
 In addition, both machine should be able to communicate at IP level through an additional interface. The IP addresses of those interface should be configured in the following scripts.
 
-##### Scripts
+### Scripts
 
 This folder contains a single script [run-tests](./run-tests.sh) that is used to execute the multi-core and single-core tests.
 
