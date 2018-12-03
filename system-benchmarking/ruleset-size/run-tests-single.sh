@@ -23,6 +23,8 @@ LOCAL_NAME=cube1
 LOCAL_DUT=130.192.225.61
 START_RATE=50.0
 
+CONTAINER_ID=0000
+
 declare -a ruleset_values=("50" "100" "500" "1000" "5000")
 
 #######################################
@@ -143,7 +145,7 @@ function cleanup_environment {
 ssh polycube@$REMOTE_DUT << EOF
   $(typeset -f polycubed_kill_and_wait)
   polycubed_kill_and_wait
-  sudo docker stop bpf-iptables
+  sudo docker stop ${CONTAINER_ID}
   sudo iptables -F FORWARD
   sudo nft flush table ip filter
   sudo nft delete table ip filter
