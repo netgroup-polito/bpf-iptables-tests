@@ -22,6 +22,8 @@ LOCAL_NAME=cube1
 LOCAL_DUT=130.192.225.61
 START_RATE=50.0
 
+CONTAINER_ID=0000
+
 declare -a ruleset_values=("50" "100" "500" "1000" "5000")
 
 #######################################
@@ -130,30 +132,11 @@ function polycubed_kill_and_wait {
 
 function setup_environment {
   size=$1
+  CONTAINER_ID=$(ssh polycube@$REMOTE_DUT "sudo docker run -id --name bpf-iptables --rm --privileged --network host -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro netgrouppolito/bpf-iptables:latest bash")
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo sh -c "echo 1 > /proc/sys/net/core/bpf_jit_enable"
-  sudo bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh > /home/polycube/log 2>&1 &"
-  sudo bash -c "$REMOTE_FOLDER/rulesets/rules_$size.sh $IPTABLES FORWARD"
-EOF
-}
-
-function start_remote_cpu_monitor {
-  size=$1
-  add_arg=$2
-  ssh polycube@$REMOTE_DUT << EOF
-  set -x
-  sudo sar -P ALL -o /tmp/output_usage.$NOW.$size.$add_arg 5 >/dev/null 2>&1 &
-EOF
-}
-
-function stop_remote_cpu_monitor {
-  size=$1
-  add_arg=$2
-  ssh polycube@$REMOTE_DUT << EOF
-  set -x
-  sudo killall sar
-  scp /tmp/output_usage.$NOW.$size.$add_arg $LOCAL_NAME@$LOCAL_DUT:$DIR/output_usage.$NOW.$size.$add_arg
+  sudo docker exec -d bpf-iptables bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh > ~/log 2>&1 &"
+  sudo docker exec bpf-iptables bash -c "$REMOTE_FOLDER/rulesets/rules_$size.sh $IPTABLES FORWARD"
 EOF
 }
 
@@ -161,6 +144,7 @@ function cleanup_environment {
 ssh polycube@$REMOTE_DUT << EOF
   $(typeset -f polycubed_kill_and_wait)
   polycubed_kill_and_wait
+  sudo docker stop bpf-iptables
   sudo iptables -F FORWARD
   sudo nft flush table ip filter
   sudo nft delete table ip filter
@@ -317,7 +301,7 @@ for size in "${ruleset_values[@]}"; do
 	then
 		disable_conntrack
 		reboot_remote_dut
-	    wait_for_remote_machine
+	  wait_for_remote_machine
 	else
 		break
 	fi
@@ -346,7 +330,6 @@ for size in "${ruleset_values[@]}"; do
 
   sleep 5
   generate_pktgen_config_file 0
-  start_remote_cpu_monitor $size "multi-core"
 
   if [ ${IPTABLES} == "pcn-iptables"  ]; then
 		disable_nft
@@ -356,7 +339,6 @@ for size in "${ruleset_values[@]}"; do
   cd $PKTGEN_FOLDER
   sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/ruleset-size.lua
   sleep 5
-  stop_remote_cpu_monitor $size "multi-core"
 
   cat "pcn-iptables-forward.csv" >> $DIR/"$OUT_FILE-$size.txt"
 
