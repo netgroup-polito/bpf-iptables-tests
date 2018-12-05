@@ -86,7 +86,7 @@ function polycubed_kill_and_wait {
     i=$((i+1))
 
     if [ "$done" -eq 1 ]; then
-        echo "killing polycubed in $run seconds"
+        echo "killing polycubed in $i seconds"
         break
     fi
   done
