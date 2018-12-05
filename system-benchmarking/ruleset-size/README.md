@@ -13,6 +13,7 @@ The packet generator is configured to generate traffic uniformly distributed amo
 #### Setup
 
 The packet generator and the DUT should be connected each other through an XDP-compatible NIC. In particular, the first interface of the generator is connected to the first interface of the DUT and the same for the second interface (which are configured accordingly in the following scripts).
+The two interfaces of the packet generator should be attached to DPDK to execute pktgen-DPDK correctly.
 
 In addition, both machine should be able to communicate at IP level through an additional interface. The IP addresses of those interface should be configured in the following scripts.
 
