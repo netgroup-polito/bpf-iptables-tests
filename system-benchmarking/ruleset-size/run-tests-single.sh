@@ -111,8 +111,9 @@ echo "$usage"
 # Kill polycubed, and wait all services to be unloaded and process to be completely killed
 function polycubed_kill_and_wait {
   echo "killing polycubed ..."
-  sudo pkill polycubed > /dev/null 2>&1
-
+ssh polycube@$REMOTE_DUT << EOF
+  sudo docker exec bpf-iptables bash -c "sudo pkill polycubed > /dev/null 2>&1"
+EOF
   done=0
   i=0
   while : ; do
@@ -146,11 +147,12 @@ function cleanup_environment {
 ssh polycube@$REMOTE_DUT << EOF
   $(typeset -f polycubed_kill_and_wait)
   polycubed_kill_and_wait
-  sudo docker stop ${CONTAINER_ID}
-  sudo iptables -F FORWARD
-  sudo nft flush table ip filter
-  sudo nft delete table ip filter
-  sudo pkill config_dut
+  sudo docker exec bpf-iptables bash -c "sudo pkill config_dut"
+  sudo docker stop ${CONTAINER_ID} &> /dev/null
+  sudo docker rm -f bof-iptables &> /dev/null
+  sudo iptables -F FORWARD &> /dev/null
+  sudo nft flush table ip filter &> /dev/null
+  sudo nft delete table ip filter &> /dev/null
 EOF
 }
 
