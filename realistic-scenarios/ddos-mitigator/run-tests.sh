@@ -424,7 +424,7 @@ for test_type in "${ruleset_values[@]}"; do
  	  sudo bash -c "(sleep 20; taskset -c 4-7 weighttp -n 1000000 -c 1000 -t 4 \"http://$REMOTE_SERVER_ADDR:$REMOTE_SERVER_PORT/$REMOTE_SERVER_FILE\" > $DIR/\"weighttp-log-${IPTABLES}-${test_type}-${i}.txt\" 2>&1) &"
 
 	  cd $PKTGEN_FOLDER
-	  sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3].0" -f $DIR/ddos-mitigator.lua -l $DIR/pktgen-log-${test_type}.txt
+	  sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3].0" -f $DIR/ddos-mitigator.lua
 
 	  cat "$PKTGEN_FOLDER/pcn-iptables-forward.csv" >> $DIR/"$OUT_FILE-${test_type}.txt"
 	  extract_rate_from_rules $DIR/"$OUT_FILE-${test_type}.txt" $test_type $i
