@@ -15,8 +15,8 @@ echo "$0 [iptables|pcn-iptables|nftables] [FORWARD]"
 echo ""
 
 if [ "$1" == "pcn-iptables" ]; then
-    echo "Using pcn-iptables"
-    IPTABLES="pcn-iptables"
+    echo "Using bpf-iptables"
+    IPTABLES="bpf-iptables"
     launch_pcn_iptables
 elif [ "$1" == "nftables" ]; then
     echo "Using nftables"
