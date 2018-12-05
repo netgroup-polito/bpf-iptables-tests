@@ -4,6 +4,7 @@ polycubed="sudo polycubed -l off -a 0.0.0.0"
 
 function initialize_pcn_iptables {
   bpf-iptables-init-xdp
+  polycubectl iptables pcn-iptables set horus=ON
     # $HOME/polycube/services/pcn-iptables/iptables-compatibility/iptables-init.sh
 }
 
