@@ -5,7 +5,7 @@ NOW=$(date +"%m-%d-%Y-%T")
 
 # Remote configurations (DUT)
 REMOTE_DUT=IPADDRESS
-REMOTE_FOLDER="~/bpf-iptables-tests/micro-benchmarks/bpf-iptables-overhead-udp"
+REMOTE_FOLDER="~/bpf-iptables-tests/micro-benchmarks/bpf-iptables-overhead/bpf-iptables-overhead-udp"
 SET_IRQ_SCRIPT="~/bpf-iptables-tests/common-scripts/set_irq_affinity"
 DST_MAC_IF0="3cfd:feaf:ec30"
 DST_MAC_IF1="3cfd:feaf:ec31"

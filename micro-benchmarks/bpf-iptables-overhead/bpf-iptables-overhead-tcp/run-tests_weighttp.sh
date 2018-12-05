@@ -31,7 +31,7 @@ NOW=$(date +"%m-%d-%Y-%T")
 
 # Remote configurations (DUT)
 REMOTE_DUT=IPADDRESS
-REMOTE_FOLDER="~/bpf-iptables-tests/micro-benchmarks/bpf-iptables-overhead-tcp"
+REMOTE_FOLDER="~/bpf-iptables-tests/micro-benchmarks/bpf-iptables-overhead/bpf-iptables-overhead-tcp"
 INGRESS_REMOTE_IFACE_NAME="enp101s0f0"
 REMOTE_SERVER_ADDR=10.10.10.1
 REMOTE_SERVER_PORT=80
