@@ -1,0 +1,7 @@
+polycubed version v0.9.0-rc1+ [git: (branch/commit): master/819bb762]
+Run Number: 1
+
+#####################################################
+# Execute the first test with interrupts set to all #
+#####################################################
+Number of clients, Requests per second
