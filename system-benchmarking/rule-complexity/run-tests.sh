@@ -112,6 +112,7 @@ echo "$usage"
 
 function setup_environment {
 local test_type=$1
+ssh polycube@$REMOTE_DUT "sudo service docker restart"
 CONTAINER_ID=$(ssh polycube@$REMOTE_DUT "sudo docker run -id --name bpf-iptables --rm --privileged --network host -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro netgrouppolito/bpf-iptables:latest bash")
 ssh polycube@$REMOTE_DUT << EOF
   set -x
@@ -345,19 +346,6 @@ for test_type in "${ruleset_values[@]}"; do
 
   generate_test_configuration $test_type
 
-  while true; do
-	wait_for_remote_machine
-	conntrack=$(check_conntrack)
-	if [ $conntrack == "enabled" ] && [ ${IPTABLES} == "pcn-iptables" ]
-	then
-		disable_conntrack
-		reboot_remote_dut
-		wait_for_remote_machine
-	else
-		break
-	fi
-  done
-
   set -e
   cleanup
 
@@ -382,11 +370,6 @@ for test_type in "${ruleset_values[@]}"; do
   sleep 5
   generate_pktgen_config_file 0
 
-  if [ ${IPTABLES} == "pcn-iptables"  ]; then
-    disable_nft
-    disable_conntrack
-  fi
-
   cd $PKTGEN_FOLDER
   sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/rule-complexity.lua
   sleep 5
@@ -395,70 +378,6 @@ for test_type in "${ruleset_values[@]}"; do
 
   cleanup_environment
   sleep 5
-  ###################################################
-  # Execute now a simple test without binary search #
-  ###################################################
-  setup_environment $test_type
-  set_irq_affinity "all"
-
-  sleep 5
-  generate_pktgen_config_file 1
-  cd $PKTGEN_FOLDER
-  sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/rule-complexity.lua
-  sleep 5
-
-  echo "" >> $DIR/"$OUT_FILE-${test_type}.txt"
-  echo "SimpleTest" >> $DIR/"$OUT_FILE-${test_type}.txt"
-
-  cat "pcn-iptables-forward.csv" >> $DIR/"$OUT_FILE-${test_type}.txt"
-
-  cleanup_environment
-  sleep 5
-  #####################################################
-  # Execute now a single core test with binary search #
-  #####################################################
-  START_RATE=5.0
-  setup_environment $test_type
-  set_irq_affinity "1" # Only core 1 is used
-
-  sleep 5
-  generate_pktgen_config_file 0
-
-  if [ ${IPTABLES} == "pcn-iptables"  ]; then
-    disable_nft
-    disable_conntrack
-  fi
-
-  cd $PKTGEN_FOLDER
-  sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/rule-complexity.lua
-  sleep 5
-
-  echo "" >> $DIR/"$OUT_FILE-${test_type}.txt"
-  echo "Single core binary search" >> $DIR/"$OUT_FILE-${test_type}.txt"
-
-  cat "pcn-iptables-forward.csv" >> $DIR/"$OUT_FILE-${test_type}.txt"
-
-  cleanup_environment
-  sleep 5
-  ###################################################
-  # Execute now a simple test without binary search #
-  ###################################################
-  setup_environment $test_type
-  set_irq_affinity "1" # Only core 1 is used
-
-  sleep 5
-  generate_pktgen_config_file 1
-  cd $PKTGEN_FOLDER
-  sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/rule-complexity.lua
-  sleep 5
-
-  echo "" >> $DIR/"$OUT_FILE-${test_type}.txt"
-  echo "Single core without binary search" >> $DIR/"$OUT_FILE-${test_type}.txt"
-
-  cat "pcn-iptables-forward.csv" >> $DIR/"$OUT_FILE-${test_type}.txt"
-
-  reboot_remote_dut
-  wait_for_remote_machine
   cd $DIR
 done
 
