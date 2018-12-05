@@ -1,0 +1,13 @@
+Command used on the client side to generate reports:
+
+cat ../iperf | parallel sudo iperf -c {} -e -t 30 |& tee report-{n}.txt
+
+On the server side I ran iperf with in server mode with the following command
+
+sudo iperf -s -D
+
+And then I took the PID of the process and I assigned a taskset to avoid it will be executed on core 1, where the firewall is executed.
+
+sudo taskset -cp 2-13 {IPERF_PID}
+
+Finally, I set the interrupts for the ingress NIC to core #1
