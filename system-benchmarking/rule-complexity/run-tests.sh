@@ -116,7 +116,7 @@ ssh polycube@$REMOTE_DUT "sudo service docker restart"
 CONTAINER_ID=$(ssh polycube@$REMOTE_DUT "sudo docker run -id --name bpf-iptables --rm --privileged --network host -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro netgrouppolito/bpf-iptables:latest bash")
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo docker exec -d bpf-iptables bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST > /home/polycube/log 2>&1 &"
+  sudo docker exec -d bpf-iptables bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST &> /home/polycube/log &"
   sudo docker exec bpf-iptables bash -c "$REMOTE_FOLDER/rulesets/rules_${test_type}.sh $IPTABLES FORWARD"
 EOF
 if [ ${IPTABLES} == "pcn-iptables"  ]; then
@@ -138,14 +138,12 @@ EOF
 
 function cleanup_environment {
 ssh polycube@$REMOTE_DUT << EOF
-  $(typeset -f polycubed_kill_and_wait)
-  polycubed_kill_and_wait
   sudo iptables -F FORWARD
-  sudo docker stop ${CONTAINER_ID}
-  sudo nft flush table ip filter
-  sudo nft delete table ip filter
+  sudo docker exec bpf-iptables bash -c "$REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST -r &> /dev/null" &> /dev/null
+  sudo docker stop ${CONTAINER_ID} &> /dev/null
+  sudo nft flush table ip filter &> /dev/null
+  sudo nft delete table ip filter &> /dev/null
   sudo pkill config_dut
-  sudo $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST -r
 EOF
 }
 
