@@ -239,7 +239,7 @@ done
 function set_irq_affinity {
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo docker exec bpf-iptables bash -c "$SET_IRQ_SCRIPT $1 $INGRESS_IFACE_NAME"
+  sudo docker exec bpf-iptables bash -c "$SET_IRQ_SCRIPT $1 $INGRESS_REMOTE_IFACE_NAME"
 EOF
 }
 
@@ -295,7 +295,7 @@ else
 fi
 
 test_range=()
-calculate_range2 $TEST_START_RANGE $TEST_END_RANGE $TEST_STEP
+calculate_range $TEST_START_RANGE $TEST_END_RANGE $TEST_STEP
 
 set -x
 for run in `seq 1 $NUMBER_RUNS`; do

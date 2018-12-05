@@ -239,7 +239,7 @@ function cleanup {
 function set_irq_affinity {
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo docker exec bpf-iptables bash -c "$SET_IRQ_SCRIPT $1 $INGRESS_IFACE_NAME"
+  sudo docker exec bpf-iptables bash -c "$SET_IRQ_SCRIPT $1 $INGRESS_REMOTE_IFACE_NAME"
 EOF
 }
 
