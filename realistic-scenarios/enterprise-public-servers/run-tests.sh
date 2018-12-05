@@ -7,7 +7,7 @@ NOW=$(date +"%m-%d-%Y-%T")
 # Remote configurations (DUT) #
 ###############################
 REMOTE_DUT=IPADDRESS
-REMOTE_FOLDER="~/bpf-iptables-tests/realistic-scenarios/enterprise-public2"
+REMOTE_FOLDER="~/bpf-iptables-tests/realistic-scenarios/enterprise-public-servers"
 SET_IRQ_SCRIPT="~/bpf-iptables-tests/common-scripts/set_irq_affinity"
 DST_MAC_IF0="3cfd:feaf:ec30"
 DST_MAC_IF1="3cfd:feaf:ec31"
@@ -22,7 +22,7 @@ polycubectl="$GOPATH/bin/polycubectl"
 ########################################
 FORWARD_TEST_LOG=forward_test.$NOW.log
 PKTGEN_FOLDER="$HOME/dev/pktgen-dpdk"
-POLYCUBECTL_CONFIG_FILE="$HOME/.config/polycube/polycubectl_config.yaml"
+POLYCUBECTL_CONFIG_FILE="~/.config/polycube/polycubectl_config.yaml"
 POLYCUBE_VERSION="none"
 IPTABLES="pcn-iptables"
 LOCAL_NAME=cube1
@@ -142,30 +142,9 @@ ssh polycube@$REMOTE_DUT "sudo service docker restart"
 CONTAINER_ID=$(ssh polycube@$REMOTE_DUT "sudo docker run -id --name bpf-iptables --rm --privileged --network host -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro netgrouppolito/bpf-iptables:latest bash")
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo docker exec -d bpf-iptables bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST > /home/polycube/log 2>&1 &"
+  sudo docker exec -d bpf-iptables bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST > ~/log 2>&1 &"
   sudo docker exec -d bpf-iptables bash -c "$REMOTE_FOLDER/rulesets/rules_${test_type}.sh $IPTABLES FORWARD"
 EOF
-if [ ${IPTABLES} == "pcn-iptables"  ]; then
-	generate_polycube_config_file
-fi
-}
-
-function generate_polycube_config_file {
-#Create configuration file for polycubectl
-ssh polycube@$REMOTE_DUT << EOF
-sudo docker exec bpf-iptables bash -c "cat > ${POLYCUBECTL_CONFIG_FILE} << EOF
-  debug: false
-  expert: true
-  url: http://${REMOTE_DUT}:9000/polycube/v1/
-  version: "2"
-  hardcodedversionenabled: true
-  singleparameterworkaround: true
-EOF"
-EOF
-}
-
-function remove_polycube_config_file {
-	rm -f ${POLYCUBECTL_CONFIG_FILE}
 }
 
 function cleanup_environment {
@@ -246,10 +225,6 @@ ssh polycube@$REMOTE_DUT << EOF
   set -x
   sudo $REMOTE_CONNTRACK_SCRIPT_FOLDER/enable.sh
 EOF
-
-if [ ${IPTABLES} == "pcn-iptables"  ]; then
-	remove_polycube_config_file
-fi
 }
 
 function cleanup {
@@ -324,7 +299,10 @@ rm -f $DIR/${dump_file}.original
 
 function dump_pcn_iptables_rules {
 local dump_file=$1
-sudo docker exec bpf-iptables bash -c "polycubectl pcn-iptables chain FORWARD stats show" > ${DIR}/${dump_file}.original
+ssh polycube@$REMOTE_DUT << EOF
+  sudo docker exec bpf-iptables bash -c "polycubectl pcn-iptables chain FORWARD stats show" > /tmp/${dump_file}
+  scp /tmp/${dump_file} $LOCAL_NAME@$LOCAL_DUT:$DIR/${dump_file}.original
+EOF
 
 # Remove empty lines at the end of the file
 awk '/^$/ {nlstack=nlstack "\n";next;} {printf "%s",nlstack; nlstack=""; print;}' $DIR/${dump_file}.original > $DIR/${dump_file}
