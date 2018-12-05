@@ -7,11 +7,8 @@ NOW=$(date +"%m-%d-%Y-%T")
 # Remote configurations (DUT) #
 ###############################
 REMOTE_DUT=IPADDRESS
-REMOTE_BASE_FOLDER="/home/polycube/iovnet-testing/pcn-iptables"
-REMOTE_FOLDER="${REMOTE_BASE_FOLDER}/paper-tests/realistic-scenarios/ddos-mitigator"
-SET_IRQ_SCRIPT="${REMOTE_BASE_FOLDER}/paper-tests/common-scripts/set_irq_affinity"
-REMOTE_CONNTRACK_SCRIPT_FOLDER="${REMOTE_BASE_FOLDER}/pcn-iptables/disable_linux_conntrack"
-REMOTE_CONNTRACK_MODULE_FILE=/etc/modprobe.d/conntrack.conf
+REMOTE_FOLDER="~/bpf-iptables-tests/realistic-scenarios/ddos-mitigator"
+SET_IRQ_SCRIPT="~/bpf-iptables-tests/common-scripts/set_irq_affinity"
 DST_MAC_IF0="3cfd:feaf:ec30"
 DST_MAC_IF1="3cfd:feaf:ec31"
 INGRESS_REMOTE_IFACE_NAME="enp101s0f0"
@@ -113,9 +110,8 @@ fi
 
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo sh -c "echo 1 > /proc/sys/net/core/bpf_jit_enable"
-  sudo bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC > /home/polycube/log 2>&1 &"
-  sudo bash -c "$REMOTE_FOLDER/rulesets/rules_ddos.sh $IPTABLES INPUT"
+  sudo docker exec -d bpf-iptables bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC > /home/polycube/log 2>&1 &"
+  sudo docker exec bpf-iptables bash -c "$REMOTE_FOLDER/rulesets/rules_ddos.sh $IPTABLES INPUT"
 EOF
 if [ ${IPTABLES} == "pcn-iptables"  ]; then
   generate_polycube_config_file
@@ -130,13 +126,15 @@ fi
 
 function generate_polycube_config_file {
 #Create configuration file for polycubectl
-cat > ${POLYCUBECTL_CONFIG_FILE} << EOF
-debug: false
-expert: true
-url: http://${REMOTE_DUT}:9000/polycube/v1/
-version: "2"
-hardcodedversionenabled: true
-singleparameterworkaround: true
+ssh polycube@$REMOTE_DUT << EOF
+sudo docker exec bpf-iptables bash -c "cat > ${POLYCUBECTL_CONFIG_FILE} << EOF
+  debug: false
+  expert: true
+  url: http://${REMOTE_DUT}:9000/polycube/v1/
+  version: "2"
+  hardcodedversionenabled: true
+  singleparameterworkaround: true
+EOF"
 EOF
 }
 
@@ -144,40 +142,21 @@ function remove_polycube_config_file {
 	rm -f ${POLYCUBECTL_CONFIG_FILE}
 }
 
-function start_remote_cpu_monitor {
-  local test_type=$1
-  local add_arg=$2
-  local run=$3
-  ssh polycube@$REMOTE_DUT << EOF
-  set -x
-  sudo sar -P ALL -o /tmp/output_usage.$NOW.${test_type}.$add_arg.$run 5 >/dev/null 2>&1 &
-EOF
-}
-
-function stop_remote_cpu_monitor {
-  local test_type=$1
-  local add_arg=$2
-  local run=$3
-  ssh polycube@$REMOTE_DUT << EOF
-  set -x
-  sudo killall sar
-  scp /tmp/output_usage.$NOW.${test_type}.$add_arg.$run $LOCAL_NAME@$LOCAL_DUT:$DIR/output_usage.$NOW.${test_type}.$add_arg.$run
-EOF
-}
-
 function cleanup_environment {
 ssh polycube@$REMOTE_DUT << EOF
   $(typeset -f polycubed_kill_and_wait)
   polycubed_kill_and_wait
   sudo iptables -F INPUT
-  sudo nft flush table ip filter
-  sudo nft delete table ip filter
-  sudo nft delete set filter blacklist
-  sudo ipset destroy
-  sudo pkill config_dut
-  sudo $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -r
+  sudo docker exec bpf-iptables bash -c "sudo pkill config_dut"
+  sudo docker exec bpf-iptables bash -c "$REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST -r &> /dev/null" &> /dev/null
+  sudo docker stop ${CONTAINER_ID} &> /dev/null
+  sudo docker rm -f bpf-iptables
+  sudo nft flush table ip filter &> /dev/null
+  sudo nft delete table ip filter &> /dev/null
+  sudo nft delete set filter blacklist &> /dev/null
+  sudo ipset destroy &> /dev/null
 EOF
-sudo killall pktgen
+sudo killall pktgen &> /dev/null
 }
 
 function wait_for_remote_machine {
@@ -259,7 +238,7 @@ function cleanup {
 function set_irq_affinity {
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo $SET_IRQ_SCRIPT $1 $INGRESS_REMOTE_IFACE_NAME
+  sudo docker exec bpf-iptables bash -c "$SET_IRQ_SCRIPT $1 $INGRESS_IFACE_NAME"
 EOF
 }
 
@@ -321,7 +300,7 @@ rm -f $DIR/${dump_file}.original
 
 function dump_pcn_iptables_rules {
 local dump_file=$1
-polycubectl pcn-iptables chain INPUT stats show > ${DIR}/${dump_file}.original
+sudo docker exec bpf-iptables bash -c "polycubectl pcn-iptables chain INPUT stats show" > ${DIR}/${dump_file}.original
 
 # Remove empty lines at the end of the file
 awk '/^$/ {nlstack=nlstack "\n";next;} {printf "%s",nlstack; nlstack=""; print;}' $DIR/${dump_file}.original > $DIR/${dump_file}
@@ -412,19 +391,6 @@ for test_type in "${ruleset_values[@]}"; do
 
   generate_test_configuration $test_type
 
-  while true; do
-	wait_for_remote_machine
-	conntrack=$(check_conntrack)
-	if [ $conntrack == "enabled" ] && [ ${IPTABLES} == "pcn-iptables" ]
-	then
-		disable_conntrack
-		reboot_remote_dut
-		wait_for_remote_machine
-	else
-		break
-	fi
-  done
-
   set -e
   cleanup
 
@@ -449,26 +415,23 @@ for test_type in "${ruleset_values[@]}"; do
 	  sleep 5
 	  generate_pktgen_config_file 1
 
-	  if [ ${IPTABLES} == "pcn-iptables"  ]; then
-		disable_nft
-		disable_conntrack
-	  fi
-
-	  start_remote_cpu_monitor $test_type "multi-core" $i
+	  #if [ ${IPTABLES} == "pcn-iptables"  ]; then
+		#disable_nft
+		#disable_conntrack
+	  #fi
 
  	  sudo bash -c "(sleep 20; taskset -c 4-7 weighttp -n 1000000 -c 1000 -t 4 \"http://$REMOTE_SERVER_ADDR:$REMOTE_SERVER_PORT/$REMOTE_SERVER_FILE\" > $DIR/\"weighttp-log-${IPTABLES}-${test_type}-${i}.txt\" 2>&1) &"
 
 	  cd $PKTGEN_FOLDER
 	  sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3].0" -f $DIR/ddos-mitigator.lua -l $DIR/pktgen-log-${test_type}.txt
 
-	  stop_remote_cpu_monitor $test_type "multi-core" $i
 	  cat "$PKTGEN_FOLDER/pcn-iptables-forward.csv" >> $DIR/"$OUT_FILE-${test_type}.txt"
 	  extract_rate_from_rules $DIR/"$OUT_FILE-${test_type}.txt" $test_type $i
 
 	  num_lines=$(awk 'END{print NR}' $DIR/weighttp-log-${IPTABLES}-${test_type}-${i}.txt)
 	  num_lines=$(( $num_lines-3 ))
-          conn_sec=$(awk 'NR=='$num_lines'{print $10}' $DIR/weighttp-log-${IPTABLES}-${test_type}-${i}.txt)
-          echo "Foud $conn_sec conn/s" |& tee -a $DIR/"$OUT_FILE-${test_type}.txt"
+    conn_sec=$(awk 'NR=='$num_lines'{print $10}' $DIR/weighttp-log-${IPTABLES}-${test_type}-${i}.txt)
+    echo "Foud $conn_sec conn/s" |& tee -a $DIR/"$OUT_FILE-${test_type}.txt"
 
 	  cleanup_environment
 	  echo "--------------------------------------------------" >> $DIR/"$OUT_FILE-${test_type}.txt"
@@ -476,8 +439,9 @@ for test_type in "${ruleset_values[@]}"; do
 
   #reboot_remote_dut
   sleep 30
-  wait_for_remote_machine
   cd $DIR
 done
+
+ssh polycube@$REMOTE_DUT "sudo service docker restart"
 
 exit 0
