@@ -72,9 +72,7 @@ echo "$usage"
 # Kill polycubed, and wait all services to be unloaded and process to be completely killed
 function polycubed_kill_and_wait {
   echo "killing polycubed ..."
-ssh polycube@$REMOTE_DUT << EOF
-  sudo docker exec bpf-iptables bash -c "sudo pkill polycubed > /dev/null 2>&1"
-EOF
+  sudo pkill polycubed > /dev/null 2>&1
   done=0
   i=0
   while : ; do
