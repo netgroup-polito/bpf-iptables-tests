@@ -45,7 +45,7 @@ if [ "$1" == "nftables" ]; then
     exec $DIR/$NFTABLES_DIR/nftables_ddos.sh
     exit 0
 elif [ "$1" == "pcn-iptables" ]; then
-    pcn-iptables -F $CHAIN
+    bpf-iptables -F $CHAIN
     polycubectl pcn-iptables set interactive=false
 elif [ "$1" == "iptables" ]; then
     $IPTABLES -F $CHAIN
