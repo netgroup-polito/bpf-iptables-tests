@@ -17,6 +17,8 @@ Each server has a dual-port Intel XL710 40Gbps NIC, each port directly connected
 
 To correctly replicate the results described in the paper, you should use a similar setup since the scripts have been created with that setup in mind.
 
+**Important**: All the tests assumes that sudo without password is enabled on the DUT. In this way the scripts running on the packet generator can set all the environment variables and launch the bpf-iptables commands.
+
 
 
 ### Testing tools
