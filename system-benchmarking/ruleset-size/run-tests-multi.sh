@@ -352,5 +352,6 @@ for size in "${ruleset_values[@]}"; do
   cd $DIR
 done
 
-reboot_remote_dut
+ssh polycube@$REMOTE_DUT "sudo service docker restart"
+
 exit 0

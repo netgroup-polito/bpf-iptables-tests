@@ -166,11 +166,11 @@ ssh polycube@$REMOTE_DUT << EOF
   $(typeset -f polycubed_kill_and_wait)
   polycubed_kill_and_wait
   sudo iptables -F FORWARD
+  sudo docker exec bpf-iptables bash -c "sudo pkill config_dut"
   sudo docker exec bpf-iptables bash -c "$REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST -r &> /dev/null" &> /dev/null
   sudo docker stop ${CONTAINER_ID} &> /dev/null
   sudo nft flush table ip filter &> /dev/null
   sudo nft delete table ip filter &> /dev/null
-  sudo pkill config_dut
 EOF
 }
 
@@ -351,5 +351,7 @@ for test_type in "${ruleset_values[@]}"; do
   sleep 5
   cd $DIR
 done
+
+ssh polycube@$REMOTE_DUT "sudo service docker restart"
 
 exit 0
