@@ -133,6 +133,7 @@ function polycubed_kill_and_wait {
 
 function setup_environment {
   size=$1
+  ssh polycube@$REMOTE_DUT "sudo service docker restart"
   CONTAINER_ID=$(ssh polycube@$REMOTE_DUT "sudo docker run -id --name bpf-iptables --rm --privileged --network host -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro netgrouppolito/bpf-iptables:latest bash")
 ssh polycube@$REMOTE_DUT << EOF
   set -x
@@ -301,19 +302,6 @@ for size in "${ruleset_values[@]}"; do
 
   generate_test_configuration $size
 
-  while true; do
-	wait_for_remote_machine
-	conntrack=$(check_conntrack)
-	if [ $conntrack == "enabled" ] && [ ${IPTABLES} == "pcn-iptables" ]
-	then
-		disable_conntrack
-		reboot_remote_dut
-	    wait_for_remote_machine
-	else
-		break
-	fi
-  done
-
   set -e
   cleanup
 
@@ -338,11 +326,6 @@ for size in "${ruleset_values[@]}"; do
   sleep 5
   generate_pktgen_config_file 0
 
-  if [ ${IPTABLES} == "pcn-iptables"  ]; then
-		disable_nft
-		disable_conntrack
-  fi
-
   cd $PKTGEN_FOLDER
   set_irq_affinity "1" # Only core 1 is used
   sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/ruleset-size.lua
@@ -363,11 +346,6 @@ for size in "${ruleset_values[@]}"; do
 
   sleep 5
   generate_pktgen_config_file 1
-
-  if [ ${IPTABLES} == "pcn-iptables"  ]; then
-		disable_nft
-		disable_conntrack
-  fi
 
   cd $PKTGEN_FOLDER
   set_irq_affinity "1" # Only core 1 is used
