@@ -132,6 +132,7 @@ function polycubed_kill_and_wait {
 
 function setup_environment {
   size=$1
+  ssh polycube@$REMOTE_DUT "sudo service docker restart"
   CONTAINER_ID=$(ssh polycube@$REMOTE_DUT "sudo docker run -id --name bpf-iptables --rm --privileged --network host -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro netgrouppolito/bpf-iptables:latest bash")
 ssh polycube@$REMOTE_DUT << EOF
   set -x
@@ -145,6 +146,7 @@ ssh polycube@$REMOTE_DUT << EOF
   $(typeset -f polycubed_kill_and_wait)
   polycubed_kill_and_wait
   sudo docker stop ${CONTAINER_ID}
+  sudo docker rm -f bof-iptables
   sudo iptables -F FORWARD
   sudo nft flush table ip filter
   sudo nft delete table ip filter
@@ -294,19 +296,6 @@ for size in "${ruleset_values[@]}"; do
 
   generate_test_configuration $size
 
-  while true; do
-	wait_for_remote_machine
-	conntrack=$(check_conntrack)
-	if [ $conntrack == "enabled" ] && [ ${IPTABLES} == "pcn-iptables" ]
-	then
-		disable_conntrack
-		reboot_remote_dut
-	  wait_for_remote_machine
-	else
-		break
-	fi
-  done
-
   set -e
   cleanup
 
@@ -314,7 +303,7 @@ for size in "${ruleset_values[@]}"; do
     ssh polycube@$REMOTE_DUT "$polycubed --version" > $DIR/"$OUT_FILE-$size.txt"
   elif [ ${IPTABLES} == "iptables"  ]; then
     ssh polycube@$REMOTE_DUT "sudo iptables --version" > $DIR/"$OUT_FILE-$size.txt"
-  else 
+  else
     ssh polycube@$REMOTE_DUT "sudo nft --version" > $DIR/"$OUT_FILE-$size.txt"
   fi
 
@@ -330,11 +319,6 @@ for size in "${ruleset_values[@]}"; do
 
   sleep 5
   generate_pktgen_config_file 0
-
-  if [ ${IPTABLES} == "pcn-iptables"  ]; then
-		disable_nft
-		disable_conntrack
-  fi
 
   cd $PKTGEN_FOLDER
   sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/ruleset-size.lua
@@ -352,11 +336,6 @@ for size in "${ruleset_values[@]}"; do
 
   sleep 5
   generate_pktgen_config_file 1
-
-  if [ ${IPTABLES} == "pcn-iptables"  ]; then
-		disable_nft
-		disable_conntrack
-  fi
 
   cd $PKTGEN_FOLDER
   sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/ruleset-size.lua
