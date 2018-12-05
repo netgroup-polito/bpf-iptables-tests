@@ -107,7 +107,8 @@ if [ ${IPTABLES} == "iptables" ] && [ "$IPSET_ENABLED" = true ]; then
 elif [ ${IPTABLES} == "nftables" ] && [ "$NFT_SET_ENABLED" = true ]; then
   IPTABLES="nft_set"
 fi
-
+ssh polycube@$REMOTE_DUT "sudo service docker restart"
+CONTAINER_ID=$(ssh polycube@$REMOTE_DUT "sudo docker run -id --name bpf-iptables --rm --privileged --network host -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro netgrouppolito/bpf-iptables:latest bash")
 ssh polycube@$REMOTE_DUT << EOF
   set -x
   sudo docker exec -d bpf-iptables bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC > /home/polycube/log 2>&1 &"
