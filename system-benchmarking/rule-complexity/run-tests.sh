@@ -111,13 +111,37 @@ where:
 echo "$usage"
 }
 
+# Kill polycubed, and wait all services to be unloaded and process to be completely killed
+function polycubed_kill_and_wait {
+  echo "killing polycubed ..."
+ssh polycube@$REMOTE_DUT << EOF
+  sudo docker exec bpf-iptables bash -c "sudo pkill polycubed > /dev/null 2>&1"
+EOF
+  done=0
+  i=0
+  while : ; do
+    sleep 1
+    alive=$(ps -el | grep polycubed)
+    if [ -z "$alive" ]; then
+      done=1
+    fi
+
+    i=$((i+1))
+
+    if [ "$done" -eq 1 ]; then
+        echo "killing polycubed in $i seconds"
+        break
+    fi
+  done
+}
+
 function setup_environment {
 local test_type=$1
 ssh polycube@$REMOTE_DUT "sudo service docker restart"
 CONTAINER_ID=$(ssh polycube@$REMOTE_DUT "sudo docker run -id --name bpf-iptables --rm --privileged --network host -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro netgrouppolito/bpf-iptables:latest bash")
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo docker exec -d bpf-iptables bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST &> /home/polycube/log &"
+  sudo docker exec -d bpf-iptables bash -c "exec -a config_dut $REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST &> ~/log &"
   sudo docker exec bpf-iptables bash -c "$REMOTE_FOLDER/rulesets/rules_${test_type}.sh $IPTABLES FORWARD"
 EOF
 if [ ${IPTABLES} == "pcn-iptables"  ]; then
@@ -139,6 +163,8 @@ EOF
 
 function cleanup_environment {
 ssh polycube@$REMOTE_DUT << EOF
+  $(typeset -f polycubed_kill_and_wait)
+  polycubed_kill_and_wait
   sudo iptables -F FORWARD
   sudo docker exec bpf-iptables bash -c "$REMOTE_FOLDER/config_dut_routing.sh -s $NUM_IP_SRC -d $NUM_IP_DST -r &> /dev/null" &> /dev/null
   sudo docker stop ${CONTAINER_ID} &> /dev/null
