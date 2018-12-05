@@ -1,4 +1,0 @@
-polycubed version v0.9.0-rc1+ [git: (branch/commit): master/819bb762]
-Processing size: 50
-4.19.0-041900-generic
-
