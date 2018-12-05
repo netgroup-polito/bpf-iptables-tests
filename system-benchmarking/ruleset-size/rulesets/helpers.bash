@@ -3,7 +3,7 @@ RELAUNCH_POLYCUBED=true
 polycubed="sudo polycubed -l off" #todo log off
 
 function initialize_pcn_iptables {
-  pcn-iptables-init-xdp
+  bpf-iptables-init-xdp
     # $HOME/polycube/services/pcn-iptables/iptables-compatibility/iptables-init.sh
 }
 
