@@ -15,6 +15,7 @@ SET_IRQ_SCRIPT="~/bpf-iptables-tests/common-scripts/set_irq_affinity"
 
 polycubed="sudo polycubed"
 polycubectl="$GOPATH/bin/polycubectl"
+POLYCUBECTL_CONFIG_FILE="$HOME/.config/polycube/polycubectl_config.yaml"
 
 ########################################
 # Local configurations (Pkt generator) #
@@ -214,61 +215,8 @@ function cleanup {
 function set_irq_affinity {
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo $SET_IRQ_SCRIPT $1 $INGRESS_IFACE_NAME
+  sudo docker exec bpf-iptables bash -c "$SET_IRQ_SCRIPT $1 $INGRESS_IFACE_NAME"
 EOF
-}
-
-# This function extracts the pkt rate from iptables
-# or pcn-iptables output.
-function extract_rate_from_rules {
-set -x
-local test_type=$1
-
-if [ ${IPTABLES} == "iptables"  ]; then
-  local dump_file=iptables-dump.${NOW}.${test_type}.txt
-  dump_iptables_rules $dump_file
-elif [ ${IPTABLES} == "nftables"  ]; then
-  local dump_file=nftables-dump.${NOW}.${test_type}.txt
-  dump_nftables_rules $dump_file
-else
-  local dump_file=pcn-iptables-dump.${NOW}.${test_type}.txt
-  dump_pcn_iptables_rules $dump_file
-fi
-}
-
-function dump_nftables_rules {
-local dump_file=$1
-ssh polycube@$REMOTE_DUT << EOF
-  set -x
-  sudo nft list table filter -a > /tmp/${dump_file}
-  scp /tmp/${dump_file} $LOCAL_NAME@$LOCAL_DUT:$DIR/${dump_file}.original
-EOF
-
-# Remove empty lines at the end of the file
-awk '/^$/ {nlstack=nlstack "\n";next;} {printf "%s",nlstack; nlstack=""; print;}' $DIR/${dump_file}.original > $DIR/${dump_file}
-rm -f $DIR/${dump_file}.original
-}
-
-function dump_iptables_rules {
-local dump_file=$1
-ssh polycube@$REMOTE_DUT << EOF
-  set -x
-  sudo iptables -vxnL FORWARD > /tmp/${dump_file}
-  scp /tmp/${dump_file} $LOCAL_NAME@$LOCAL_DUT:$DIR/${dump_file}.original
-EOF
-
-# Remove empty lines at the end of the file
-awk '/^$/ {nlstack=nlstack "\n";next;} {printf "%s",nlstack; nlstack=""; print;}' $DIR/${dump_file}.original > $DIR/${dump_file}
-rm -f $DIR/${dump_file}.original
-}
-
-function dump_pcn_iptables_rules {
-local dump_file=$1
-polycubectl pcn-iptables chain FORWARD stats show > ${DIR}/${dump_file}.original
-
-# Remove empty lines at the end of the file
-awk '/^$/ {nlstack=nlstack "\n";next;} {printf "%s",nlstack; nlstack=""; print;}' $DIR/${dump_file}.original > $DIR/${dump_file}
-rm -f $DIR/${dump_file}.original
 }
 
 function generate_pktgen_config_file {
@@ -371,7 +319,6 @@ for test_type in "${ruleset_values[@]}"; do
   cd $PKTGEN_FOLDER
   sudo ./app/x86_64-native-linuxapp-gcc/pktgen -c ff -n 4 --proc-type auto --file-prefix pg -- -T -P -m "[1:2/3/4/5].0, [6/7].1" -f $DIR/rule-complexity.lua
   sleep 5
-  extract_rate_from_rules $test_type
   cat "pcn-iptables-forward.csv" >> $DIR/"$OUT_FILE-${test_type}.txt"
 
   cleanup_environment
