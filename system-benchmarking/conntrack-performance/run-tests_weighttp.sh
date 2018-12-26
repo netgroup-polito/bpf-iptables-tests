@@ -3,7 +3,6 @@
 # This test requires an nginx server on the remote DUT. We suggest to set the following
 # parameters on both the remote and local server in order to prevent the consumption
 # of ephimeral ports.
-# For this test we use wrk (https://github.com/wg/wrk), a HTTP benchmarking tool
 #
 # To make this script work correctly you need to increase the limit of file descriptor
 # opened by a single process, so we can stress the conntrack table.
