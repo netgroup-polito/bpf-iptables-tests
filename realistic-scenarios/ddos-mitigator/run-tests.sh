@@ -8,37 +8,41 @@ NOW=$(date +"%m-%d-%Y-%T")
 ###############################
 REMOTE_DUT=IPADDRESS
 REMOTE_FOLDER="~/bpf-iptables-tests/realistic-scenarios/ddos-mitigator"
-SET_IRQ_SCRIPT="~/bpf-iptables-tests/common-scripts/set_irq_affinity"
 DST_MAC_IF0="3cfd:feaf:ec30"
 DST_MAC_IF1="3cfd:feaf:ec31"
 INGRESS_REMOTE_IFACE_NAME="enp101s0f0"
 EGRESS_REMOTE_IFACE_NAME="enp101s0f1"
-REMOTE_SERVER_ADDR=10.10.10.1
-REMOTE_SERVER_PORT=80
-REMOTE_SERVER_FILE=static_file # 100Byte file places in the server
-INGRESS_REMOTE_IFACE_ADDR=192.168.0.1
-
-polycubed="sudo polycubed"
-polycubectl="$GOPATH/bin/polycubectl"
 
 ########################################
 # Local configurations (Pkt generator) #
 ########################################
-FORWARD_TEST_LOG=forward_test.$NOW.log
-PKTGEN_FOLDER="$HOME/dev/pktgen-dpdk"
-POLYCUBECTL_CONFIG_FILE="$HOME/.config/polycube/polycubectl_config.yaml"
-POLYCUBE_VERSION="none"
-IPTABLES="pcn-iptables"
-LOCAL_NAME=cube1
 LOCAL_DUT=IPADDRESS
-START_RATE=50
-TEST_DURATION=60
+PKTGEN_FOLDER="$HOME/dev/pktgen-dpdk"
+LOCAL_NAME=cube1
 INGRESS_LOCAL_IFACE_NAME="enp1s0f0"
 EGRESS_LOCAL_IFACE_NAME="enp1s0f1"
 
+#####################################################
+# Script configuration (don't touch these variables #
+# if you do not know what you are doing             #
+#####################################################
 LOCAL_CLIENT_ADDR=10.10.10.2
 IPSET_ENABLED=false
 NFT_SET_ENABLED=false
+REMOTE_SERVER_ADDR=10.10.10.1
+REMOTE_SERVER_PORT=80
+REMOTE_SERVER_FILE=static_file # 100Byte file places in the server
+INGRESS_REMOTE_IFACE_ADDR=192.168.0.1
+START_RATE=50
+TEST_DURATION=60
+
+polycubed="sudo polycubed"
+polycubectl="$GOPATH/bin/polycubectl"
+SET_IRQ_SCRIPT="~/bpf-iptables-tests/common-scripts/set_irq_affinity"
+FORWARD_TEST_LOG=forward_test.$NOW.log
+POLYCUBECTL_CONFIG_FILE="$HOME/.config/polycube/polycubectl_config.yaml"
+POLYCUBE_VERSION="none"
+IPTABLES="pcn-iptables"
 
 declare -a ruleset_values=("0.1" "0.5" "1" "2.5" "5" "10" "15" "20" "25" "30" "35" "40" "45" "50")
 
@@ -192,21 +196,7 @@ echo "$result"
 
 function disable_conntrack {
 ssh polycube@$REMOTE_DUT << EOF
-  sudo $REMOTE_CONNTRACK_SCRIPT_FOLDER/disable.sh
-  sudo rmmod iptable_nat
-  sudo rmmod ipt_MASQUERADE
-  sudo rmmod nf_nat_ipv4
-  sudo rmmod nf_nat
-  sudo rmmod xt_conntrack
-  sudo rmmod nf_conntrack_netlink
-  sudo rmmod nf_conntrack
-  sudo rmmod iptable_filter
-  sudo rmmod ip_tables
-  sudo rmmod nf_defrag_ipv6
-  sudo rmmod nf_defrag_ipv4
-  sudo rmmod x_tables
-  sudo rmmod ip_set_hash_ipport
-  sudo rmmod ip_set
+  sudo docker exec bpf-iptables bash -c "$DISABLE_CONNTRACK_SCRIPT"
 EOF
 }
 
@@ -381,6 +371,16 @@ if [ -z ${OUT_FILE+x} ]; then
 	echo "You should specify the output file with the -o option" >&2;
 	show_help
 	exit 0
+fi
+
+# Check if the server can connect without password
+ssh -o PasswordAuthentication=no -o BatchMode=yes polycube@$REMOTE_DUT exit &>/dev/null
+if [ $? == 0 ]; then
+  echo "Can connect: let's continue"
+else
+  echo "This client can connect to the DUT without password."
+  echo "To make this script working you should use the publickey authentication"
+  exit 1
 fi
 
 set -x

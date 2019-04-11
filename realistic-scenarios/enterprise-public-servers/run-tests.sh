@@ -8,27 +8,35 @@ NOW=$(date +"%m-%d-%Y-%T")
 ###############################
 REMOTE_DUT=IPADDRESS
 REMOTE_FOLDER="~/bpf-iptables-tests/realistic-scenarios/enterprise-public-servers"
-SET_IRQ_SCRIPT="~/bpf-iptables-tests/common-scripts/set_irq_affinity"
 DST_MAC_IF0="3cfd:feaf:ec30"
 DST_MAC_IF1="3cfd:feaf:ec31"
 INGRESS_IFACE_NAME="enp101s0f0"
 EGRESS_IFACE_NAME="enp101s0f1"
 
-polycubed="sudo polycubed"
-polycubectl="$GOPATH/bin/polycubectl"
-
 ########################################
 # Local configurations (Pkt generator) #
 ########################################
-FORWARD_TEST_LOG=forward_test.$NOW.log
+LOCAL_DUT=IPADDRESS
 PKTGEN_FOLDER="$HOME/dev/pktgen-dpdk"
-POLYCUBECTL_CONFIG_FILE="~/.config/polycube/polycubectl_config.yaml"
+LOCAL_NAME=cube1
+
+
+#####################################################
+# Script configuration (don't touch these variables #
+# if you do not know what you are doing             #
+#####################################################
+TEST_DURATION=30
+START_RATE=25
+
+CONTAINER_ID=0000
+polycubed="sudo polycubed"
+polycubectl="$GOPATH/bin/polycubectl"
 POLYCUBE_VERSION="none"
 IPTABLES="pcn-iptables"
-LOCAL_NAME=cube1
-LOCAL_DUT=IPADDRESS
-START_RATE=25
-TEST_DURATION=30
+FORWARD_TEST_LOG=forward_test.$NOW.log
+POLYCUBECTL_CONFIG_FILE="~/.config/polycube/polycubectl_config.yaml"
+SET_IRQ_SCRIPT="~/bpf-iptables-tests/common-scripts/set_irq_affinity"
+DISABLE_CONNTRACK_SCRIPT="~/bpf-iptables-tests/common-scripts/disable_conntrack.sh"
 
 declare -a ruleset_values=("50" "100" "500" "1000" "5000")
 
@@ -194,20 +202,7 @@ echo "$result"
 function disable_conntrack {
 ssh polycube@$REMOTE_DUT << EOF
   set -x
-  sudo $REMOTE_CONNTRACK_SCRIPT_FOLDER/disable.sh
-  sudo rmmod iptable_nat
-  sudo rmmod ipt_MASQUERADE
-  sudo rmmod nf_nat_ipv4
-  sudo rmmod nf_nat
-  sudo rmmod xt_conntrack
-  sudo rmmod nf_conntrack_netlink
-  sudo rmmod nf_conntrack
-  sudo rmmod iptable_filter
-  sudo rmmod ip_tables
-  sudo rmmod nf_defrag_ipv6
-  sudo rmmod nf_defrag_ipv4
-  sudo rmmod xt_tcpudp
-  sudo rmmod x_tables
+  sudo docker exec bpf-iptables bash -c "$DISABLE_CONNTRACK_SCRIPT"
 EOF
 }
 
@@ -376,6 +371,16 @@ if [ -z ${OUT_FILE+x} ]; then
 	echo "You should specify the output file with the -o option" >&2;
 	show_help
 	exit 0
+fi
+
+# Check if the server can connect without password
+ssh -o PasswordAuthentication=no -o BatchMode=yes polycube@$REMOTE_DUT exit &>/dev/null
+if [ $? == 0 ]; then
+  echo "Can connect: let's continue"
+else
+  echo "This client can connect to the DUT without password."
+  echo "To make this script working you should use the publickey authentication"
+  exit 1
 fi
 
 set -x
