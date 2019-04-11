@@ -3,7 +3,6 @@
 # This test requires an nginx server on the remote DUT. We suggest to set the following
 # parameters on both the remote and local server in order to prevent the consumption
 # of ephimeral ports.
-# For this test we use wrk (https://github.com/wg/wrk), a HTTP benchmarking tool
 #
 # To make this script work correctly you need to increase the limit of file descriptor
 # opened by a single process, so we can stress the conntrack table.
@@ -30,7 +29,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 NOW=$(date +"%m-%d-%Y-%T")
 
 # Remote configurations (DUT)
-REMOTE_DUT=130.192.225.106
+REMOTE_DUT=IPADDRESS
 REMOTE_FOLDER="~/bpf-iptables-tests/system-benchmarking/conntrack-performance"
 INGRESS_REMOTE_IFACE_NAME="enp101s0f0"
 REMOTE_SERVER_ADDR=10.10.10.1
@@ -47,7 +46,7 @@ INGRESS_LOCAL_IFACE_NAME="enp1s0f0"
 LOCAL_CLIENT_ADDR=10.10.10.2
 IPTABLES="pcn-iptables"
 LOCAL_NAME=cube1
-LOCAL_DUT=130.192.225.61
+LOCAL_DUT=IPADDRESS
 
 TEST_DURATION=30s
 TEST_START_RANGE=1

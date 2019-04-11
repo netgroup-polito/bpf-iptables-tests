@@ -30,8 +30,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 NOW=$(date +"%m-%d-%Y-%T")
 
 # Remote configurations (DUT)
-REMOTE_DUT=130.192.225.106
-REMOTE_FOLDER="~/bpf-iptables-tests/micro-benchmarks/bpf-iptables-overhead-tcp"
+REMOTE_DUT=IPADDRESS
+REMOTE_FOLDER="~/bpf-iptables-tests/micro-benchmarks/bpf-iptables-overhead/bpf-iptables-overhead-tcp"
 INGRESS_REMOTE_IFACE_NAME="enp101s0f0"
 REMOTE_SERVER_ADDR=10.10.10.1
 REMOTE_SERVER_PORT=80
@@ -47,7 +47,7 @@ INGRESS_LOCAL_IFACE_NAME="enp1s0f0"
 LOCAL_CLIENT_ADDR=10.10.10.2
 IPTABLES="pcn-iptables"
 LOCAL_NAME=cube1
-LOCAL_DUT=130.192.225.61
+LOCAL_DUT=IPADDRESS
 
 TEST_DURATION=30s
 TEST_START_RANGE=1000
@@ -86,7 +86,7 @@ function polycubed_kill_and_wait {
     i=$((i+1))
 
     if [ "$done" -eq 1 ]; then
-        echo "killing polycubed in $run seconds"
+        echo "killing polycubed in $i seconds"
         break
     fi
   done

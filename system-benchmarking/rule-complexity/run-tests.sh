@@ -6,7 +6,7 @@ NOW=$(date +"%m-%d-%Y-%T")
 ###############################
 # Remote configurations (DUT) #
 ###############################
-REMOTE_DUT=130.192.225.106
+REMOTE_DUT=IPADDRESS
 REMOTE_FOLDER="~/bpf-iptables-tests/system-benchmarking/rule-complexity"
 DST_MAC_IF0="3cfd:feaf:ec30"
 DST_MAC_IF1="3cfd:feaf:ec31"
@@ -24,7 +24,7 @@ PKTGEN_FOLDER="$HOME/dev/pktgen-dpdk"
 POLYCUBE_VERSION="none"
 IPTABLES="pcn-iptables"
 LOCAL_NAME=cube1
-LOCAL_DUT=130.192.225.61
+LOCAL_DUT=IPADDRESS
 START_RATE=50.0
 
 CONTAINER_ID=0000

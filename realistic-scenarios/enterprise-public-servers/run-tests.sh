@@ -6,7 +6,7 @@ NOW=$(date +"%m-%d-%Y-%T")
 ###############################
 # Remote configurations (DUT) #
 ###############################
-REMOTE_DUT=130.192.225.106
+REMOTE_DUT=IPADDRESS
 REMOTE_FOLDER="~/bpf-iptables-tests/realistic-scenarios/enterprise-public-servers"
 SET_IRQ_SCRIPT="~/bpf-iptables-tests/common-scripts/set_irq_affinity"
 DST_MAC_IF0="3cfd:feaf:ec30"
@@ -26,7 +26,7 @@ POLYCUBECTL_CONFIG_FILE="~/.config/polycube/polycubectl_config.yaml"
 POLYCUBE_VERSION="none"
 IPTABLES="pcn-iptables"
 LOCAL_NAME=cube1
-LOCAL_DUT=130.192.225.61
+LOCAL_DUT=IPADDRESS
 START_RATE=25
 TEST_DURATION=30
 

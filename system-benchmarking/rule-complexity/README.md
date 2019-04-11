@@ -48,7 +48,7 @@ INGRESS_IFACE_NAME="enp101s0f0" (Name of the receiver interface of the DUT)
 # Local configurations (Pkt generator)
 PKTGEN_FOLDER="$HOME/dev/pktgen-dpdk"
 LOCAL_NAME=cube1 (Name of the user in the pkt generator machine)
-LOCAL_DUT=130.192.225.61 (IP address of the pkt generator machine)
+LOCAL_DUT=IPADDRESS (IP address of the pkt generator machine)
 ```
 
 For example, to execute a single run of the multi-core test using bpf-iptables you should execute the following command:
