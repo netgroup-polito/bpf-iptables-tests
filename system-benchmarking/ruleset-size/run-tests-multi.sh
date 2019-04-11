@@ -295,6 +295,16 @@ fi
 
 set -x
 
+# Check if the server can connect without password
+ssh -o PasswordAuthentication=no -o BatchMode=yes polycube@$REMOTE_DUT exit &>/dev/null
+if [ $? == 0 ]; then
+  echo "Can connect: let's continue"
+else
+  echo "This client can connect to the DUT without password."
+  echo "To make this script working you should use the publickey authentication"
+  exit 1
+fi
+
 for size in "${ruleset_values[@]}"; do
   set +e
 
