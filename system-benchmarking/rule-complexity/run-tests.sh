@@ -6,7 +6,7 @@ NOW=$(date +"%m-%d-%Y-%T")
 ###############################
 # Remote configurations (DUT) #
 ###############################
-REMOTE_DUT=IPADDRESS
+REMOTE_DUT=130.192.225.106
 REMOTE_FOLDER="~/bpf-iptables-tests/system-benchmarking/rule-complexity"
 DST_MAC_IF0="3cfd:feaf:ec30"
 DST_MAC_IF1="3cfd:feaf:ec31"
@@ -15,7 +15,11 @@ INGRESS_IFACE_NAME="enp101s0f0"
 ########################################
 # Local configurations (Pkt generator) #
 ########################################
+<<<<<<< HEAD
 LOCAL_DUT=IPADDRESS
+=======
+LOCAL_DUT=130.192.225.51
+>>>>>>> Modified run-test rule-complexity
 PKTGEN_FOLDER="$HOME/dev/pktgen-dpdk"
 LOCAL_NAME=cube1
 
